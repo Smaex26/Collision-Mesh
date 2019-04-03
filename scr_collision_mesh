@@ -1,0 +1,92 @@
+///scr_collisionMesh(object index,room width,room height,texture size)
+//Created by Spasman
+//This script will take every instance of the defined object index and merge them into one big sprite/collision mask.
+//Good for games that use a bunch of objects for collision and nothing else!
+//object index = Defines what object to merge into a collision mesh
+//room width = Tells the script what the room width is. Just put room_width if you don't know what to do here.
+//room height = Tells the script what the room height is. Just put room_height if you don't know what to do here.
+//texture size = Defines what you want as the maximum mesh/texture size. I'd recommend setting it to the texture page size setting in your global game settings. (Global Game Settings -> Windows (or w/e OS you want) tab)
+
+
+//Create surface and variables
+var collision_surface = surface_create(argument1,argument2)
+var cutX = 0
+var cutY = 0
+var spr = -1
+var sprW = 0
+var sprH = 0
+
+//sets the surface target to what we just created
+surface_set_target(collision_surface);
+
+//draw the sprite assigned to the defined object index
+with(argument0) {
+    draw_sprite(sprite_index,image_index,x,y)
+}
+
+//Resets the surface back to the application surface
+surface_reset_target();
+
+//Destroys all of the instances for the defined object index
+with(argument0) {
+    instance_destroy();
+}
+
+//A big scary nested while loop that will cut the surface into the pieces and turn them into sprites/collision masks
+//cutX and cutY define the current position of where we're cutting up the surface. Think of it as the point of the knife when slicing cake!
+//Enter the first while loop to determine height.
+while(1) {
+    //Break out of the FIRST while loop when the cutting position Y goes beyond the room height.
+    if cutY >= argument2 {
+        break;
+    }
+    cutX = 0
+    
+    //Before we determine height, enter a SECOND while loop to determine the width
+    while(1) {
+        //Set the default sprite size to the definied texture size
+        sprW = argument3
+        sprH = argument3
+        
+        //If the cutting position + defined texture size go beyond the defined room sizes, adjust to only reach the end of room.
+        if cutX+sprW > argument1 {
+            sprW = point_distance(cutX,0,argument1,0)
+        }
+        if cutY+sprH > argument2 {
+            sprH = point_distance(0,cutY,0,argument2)
+        }
+        
+        //Create the sprite and collision mask from the surface from the cutting position, with the set width and height from sprW/sprH
+        spr = sprite_create_from_surface(collision_surface,cutX,cutY,sprW,sprH,false,false,0,0)
+        sprite_collision_mask(spr, false, 0, 0, 0, sprW, sprH, 0, 0);
+        
+        //Create an instance of the defined object index at the cutting position and assign the newly created sprite from it
+        mb = instance_create_layer(cutX,cutY,"Ground", argument0)
+        mb.sprite_index = spr
+        
+        //Move the X coordinates of the cutting position to the next texture page. Stop yourself short w/ point_distance() if you try to go beyond the room width
+        if cutX+argument3 > argument1 {
+            cutX += point_distance(cutX,0,argument1,0)
+        }
+        else {
+            cutX += argument3
+        }
+        
+        //Break out of the SECOND while loop when the cutting position X goes beyond the room width.
+        if cutX >= argument1 {
+            break;
+        }
+    }
+    
+    //Move the Y coordinates of the cutting position to the next texture page. Stop yourself short w/ point_distance() if you try to go beyond the room height.
+    if cutY+argument3 > argument2 {
+        cutY += point_distance(0,cutY,0,argument2)
+    }
+    else {
+        cutY += argument3
+    }
+}
+
+//Destroy the surface + notify compile window
+surface_free(collision_surface);
+show_debug_message("Completed collision mesh for object index "+object_get_name(argument0))
